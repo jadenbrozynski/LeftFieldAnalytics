@@ -10,6 +10,7 @@ import {
   Clock,
   Flag,
   MessageSquare,
+  MessagesSquare,
   Heart,
   History,
   Menu,
@@ -17,6 +18,9 @@ import {
   Search,
   LogOut,
   Globe,
+  HeartHandshake,
+  TextQuote,
+  BarChart3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -31,8 +35,11 @@ const navigation = [
   { name: "Profiles", href: "/profiles", icon: Users },
   { name: "Waitlist", href: "/waitlist", icon: Clock },
   { name: "World Domination", href: "/world-domination", icon: Globe },
+  { name: "Drops", href: "/drops", icon: HeartHandshake },
+  { name: "Messages", href: "/messages", icon: MessagesSquare },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Reports", href: "/reports", icon: Flag },
-  { name: "Prompts", href: "/prompts", icon: MessageSquare },
+  { name: "Prompts", href: "/prompts", icon: TextQuote },
   { name: "Interests & Activities", href: "/interests", icon: Heart },
   { name: "Timeline", href: "/timeline", icon: History },
 ]
