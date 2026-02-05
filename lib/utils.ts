@@ -58,8 +58,27 @@ export function getStatusColor(status: string): string {
       return 'bg-red-100 text-red-800'
     case 'deleted':
       return 'bg-gray-100 text-gray-800'
+    case 'pending_delete':
+      return 'bg-orange-100 text-orange-800'
     default:
       return 'bg-gray-100 text-gray-800'
+  }
+}
+
+export function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'live':
+      return 'Live'
+    case 'waitlisted':
+      return 'Waitlisted'
+    case 'banned':
+      return 'Banned'
+    case 'deleted':
+      return 'Deleted'
+    case 'pending_delete':
+      return 'Pending Delete'
+    default:
+      return status
   }
 }
 

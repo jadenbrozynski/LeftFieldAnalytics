@@ -18,8 +18,12 @@ import {
   Clock,
   Shield,
   Play,
+  Trash2,
+  RotateCcw,
+  Loader2,
 } from "lucide-react"
-import { fetchProfile } from "@/lib/api"
+import { fetchProfile, deleteProfile, cancelProfileDeletion } from "@/lib/api"
+import { DeleteProfileDialog } from "@/components/delete-profile-dialog"
 import { Profile } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
-import { cn, formatDate, formatDateTime, formatHeight, getStatusColor, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
 
 export default function ProfileDetailPage() {
   const params = useParams()
@@ -38,6 +42,27 @@ export default function ProfileDetailPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0)
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [cancellingDelete, setCancellingDelete] = React.useState(false)
+
+  const handleDelete = async () => {
+    await deleteProfile(profileId)
+    // Reload the profile to reflect new status
+    const updated = await fetchProfile(profileId)
+    setProfile(updated)
+  }
+
+  const handleCancelDelete = async () => {
+    setCancellingDelete(true)
+    try {
+      await cancelProfileDeletion(profileId, 'live')
+      // Reload the profile to reflect new status
+      const updated = await fetchProfile(profileId)
+      setProfile(updated)
+    } finally {
+      setCancellingDelete(false)
+    }
+  }
 
   React.useEffect(() => {
     async function loadProfile() {
@@ -231,9 +256,41 @@ export default function ProfileDetailPage() {
                     </div>
                   )}
                 </div>
-                <Badge className={cn(getStatusColor(profile.status), "text-sm")}>
-                  {profile.status}
-                </Badge>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge className={cn(getStatusColor(profile.status), "text-sm")}>
+                    {getStatusLabel(profile.status)}
+                  </Badge>
+                  {profile.status === 'pending_delete' && profile.delete_at && (
+                    <span className="text-xs text-orange-600">
+                      Deletes {formatDate(profile.delete_at)}
+                    </span>
+                  )}
+                  {profile.status === 'pending_delete' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelDelete}
+                      disabled={cancellingDelete}
+                    >
+                      {cancellingDelete ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                      )}
+                      Cancel Deletion
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <Separator />
@@ -351,12 +408,14 @@ export default function ProfileDetailPage() {
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <span>Joined {formatDate(profile.created_at)}</span>
                 </div>
-                {profile.user.last_seen_at && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                    <span>Last seen {formatDateTime(profile.user.last_seen_at)}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span>
+                    Last seen {profile.user.last_seen_at
+                      ? formatRelativeTime(profile.user.last_seen_at)
+                      : "Never"}
+                  </span>
+                </div>
                 {profile.user.referral_code && (
                   <div className="flex items-center gap-2 text-gray-600">
                     <Shield className="h-4 w-4 text-gray-400" />
@@ -412,6 +471,14 @@ export default function ProfileDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteProfileDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        profileName={`${profile.first_name} ${profile.last_name}`}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

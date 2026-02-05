@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, AlertTriangle, MessageSquare, Image as ImageIcon, Lock } from "lucide-react"
+import { ChevronLeft, AlertTriangle, MessageSquare, Image as ImageIcon, Lock, ZoomIn } from "lucide-react"
 import { fetchReport } from "@/lib/api"
 import { ProfileReport } from "@/lib/types"
 import { ProfileView } from "@/components/profile-view"
@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateTime, formatPhoneNumber } from "@/lib/utils"
+import { ImageLightbox } from "@/components/image-lightbox"
 
 export default function ReportDetailPage() {
   const params = useParams()
@@ -27,6 +28,7 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [reviewerNotes, setReviewerNotes] = React.useState("")
+  const [lightboxOpen, setLightboxOpen] = React.useState(false)
 
   React.useEffect(() => {
     async function loadReport() {
@@ -198,16 +200,28 @@ export default function ReportDetailPage() {
                       <ImageIcon className="h-4 w-4" />
                       Reported Content
                     </Label>
-                    <div className="mt-2 relative aspect-square w-48 rounded-lg overflow-hidden bg-gray-100">
+                    <button
+                      onClick={() => setLightboxOpen(true)}
+                      className="mt-2 relative aspect-square w-48 rounded-lg overflow-hidden bg-gray-100 group cursor-pointer"
+                    >
                       <Image
                         src={report.reported_upload.url}
                         alt="Reported content"
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform group-hover:scale-105"
                         unoptimized
                       />
-                    </div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <ZoomIn className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </button>
                   </div>
+                  <ImageLightbox
+                    src={report.reported_upload.url}
+                    alt="Reported content"
+                    open={lightboxOpen}
+                    onOpenChange={setLightboxOpen}
+                  />
                 </>
               )}
 

@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { formatDate, getStatusColor, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { formatDate, formatRelativeTime, getStatusColor, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
 
 export default function ProfilesPage() {
   const [profiles, setProfiles] = React.useState<Profile[]>([])
@@ -55,6 +55,7 @@ export default function ProfilesPage() {
           status: filters.status,
           gender: filters.gender,
           city: filters.city,
+          last_seen: filters.last_seen,
           page: pagination.page,
           per_page: pagination.per_page,
         })
@@ -82,6 +83,7 @@ export default function ProfilesPage() {
         { value: "waitlisted", label: "Waitlisted" },
         { value: "banned", label: "Banned" },
         { value: "deleted", label: "Deleted" },
+        { value: "pending_delete", label: "Pending Delete" },
       ],
     },
     {
@@ -102,6 +104,18 @@ export default function ProfilesPage() {
         value: city.id,
         label: `${city.name}, ${city.state}`,
       })),
+    },
+    {
+      id: "last_seen",
+      label: "Last Seen",
+      type: "select",
+      options: [
+        { value: "24h", label: "Last 24 hours" },
+        { value: "7d", label: "Last 7 days" },
+        { value: "30d", label: "Last 30 days" },
+        { value: "90d", label: "Last 90 days" },
+        { value: "never", label: "Never" },
+      ],
     },
   ]
 
@@ -131,8 +145,15 @@ export default function ProfilesPage() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium text-gray-900">
-              {profile.first_name} {profile.last_name}
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-900">
+                {profile.first_name} {profile.last_name}
+              </span>
+              <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                {profile.user.last_seen_at
+                  ? formatRelativeTime(profile.user.last_seen_at)
+                  : "Never"}
+              </span>
             </div>
             <div className="text-xs text-gray-500">{formatPhoneNumber(profile.user.phone)}</div>
           </div>

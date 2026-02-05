@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { query, queryOne, mutateOne } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +24,7 @@ interface ProfileRow {
   needs_manual_review: boolean
   created_at: string
   updated_at: string
+  delete_at: string | null
   // User fields
   user_phone: string
   user_email: string | null
@@ -75,10 +76,10 @@ interface ActivityRow {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
 
     // Fetch profile with user and geolocation
     const profileQuery = `
@@ -103,6 +104,7 @@ export async function GET(
         p.needs_manual_review,
         p.created_at,
         p.updated_at,
+        p.delete_at,
         -- User
         u.phone as user_phone,
         u.email as user_email,
@@ -200,6 +202,7 @@ export async function GET(
       needs_manual_review: profileRow.needs_manual_review,
       created_at: profileRow.created_at,
       updated_at: profileRow.updated_at,
+      delete_at: profileRow.delete_at,
       user: {
         id: profileRow.user_id,
         phone: profileRow.user_phone,
@@ -256,6 +259,131 @@ export async function GET(
     console.error('Profile detail API error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch profile' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Soft delete profile (sets pending_delete status with 7-day grace period)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+
+    // Set status to pending_delete and delete_at to 7 days from now
+    const result = await mutateOne<{ id: string; status: string; delete_at: string }>(
+      `UPDATE profiles
+       SET status = 'pending_delete',
+           delete_at = NOW() + INTERVAL '7 days',
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, status, delete_at`,
+      [id]
+    )
+
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: result.id,
+      status: result.status,
+      delete_at: result.delete_at,
+    })
+  } catch (error) {
+    console.error('Profile delete API error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete profile' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH - Update profile (cancel deletion or change status)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params
+    const body = await request.json()
+    const { action, restore_status, status } = body
+
+    if (action === 'cancel_deletion') {
+      // Cancel pending deletion - restore previous status and clear delete_at
+      const restoreStatus = restore_status || 'live'
+      const result = await mutateOne<{ id: string; status: string; delete_at: string | null }>(
+        `UPDATE profiles
+         SET status = $2,
+             delete_at = NULL,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, status, delete_at`,
+        [id, restoreStatus]
+      )
+
+      if (!result) {
+        return NextResponse.json(
+          { error: 'Profile not found' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: result.id,
+        status: result.status,
+        delete_at: result.delete_at,
+      })
+    }
+
+    if (action === 'update_status') {
+      // Update profile status
+      const validStatuses = ['live', 'waitlisted', 'banned', 'deleted', 'pending_delete']
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { error: 'Invalid status' },
+          { status: 400 }
+        )
+      }
+
+      const result = await mutateOne<{ id: string; status: string }>(
+        `UPDATE profiles
+         SET status = $2,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, status`,
+        [id, status]
+      )
+
+      if (!result) {
+        return NextResponse.json(
+          { error: 'Profile not found' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: result.id,
+        status: result.status,
+      })
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid action' },
+      { status: 400 }
+    )
+  } catch (error) {
+    console.error('Profile patch API error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update profile' },
       { status: 500 }
     )
   }

@@ -24,6 +24,7 @@ interface ProfileRow {
   needs_manual_review: boolean
   created_at: string
   updated_at: string
+  delete_at: string | null
   // User fields
   user_phone: string
   user_email: string | null
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || ''
     const gender = searchParams.get('gender') || ''
     const cityId = searchParams.get('city') || ''
+    const lastSeen = searchParams.get('last_seen') || ''
 
     // Build WHERE clause
     const conditions: string[] = []
@@ -99,6 +101,23 @@ export async function GET(request: NextRequest) {
       conditions.push(`(p.waitlist_city_id = $${paramIndex} OR wc.id = $${paramIndex})`)
       params.push(cityId)
       paramIndex++
+    }
+
+    if (lastSeen && lastSeen !== 'all') {
+      if (lastSeen === 'never') {
+        conditions.push(`u.last_seen_at IS NULL`)
+      } else {
+        const intervalMap: Record<string, string> = {
+          '24h': '24 hours',
+          '7d': '7 days',
+          '30d': '30 days',
+          '90d': '90 days',
+        }
+        const interval = intervalMap[lastSeen]
+        if (interval) {
+          conditions.push(`u.last_seen_at >= NOW() - INTERVAL '${interval}'`)
+        }
+      }
     }
 
     const whereClause = conditions.length > 0
@@ -138,6 +157,7 @@ export async function GET(request: NextRequest) {
         p.needs_manual_review,
         p.created_at,
         p.updated_at,
+        p.delete_at,
         -- User
         u.phone as user_phone,
         u.email as user_email,
@@ -207,6 +227,7 @@ export async function GET(request: NextRequest) {
       needs_manual_review: row.needs_manual_review,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      delete_at: row.delete_at,
       user: {
         id: row.user_id,
         phone: row.user_phone,

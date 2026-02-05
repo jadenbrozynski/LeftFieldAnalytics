@@ -16,9 +16,14 @@ import {
   CheckCircle,
   AlertCircle,
   ExternalLink,
+  Trash2,
+  RotateCcw,
+  Loader2,
 } from "lucide-react"
 import { Profile } from "@/lib/types"
-import { cn, formatDate, formatDateTime, formatHeight, getStatusColor, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { deleteProfile, cancelProfileDeletion } from "@/lib/api"
+import { DeleteProfileDialog } from "@/components/delete-profile-dialog"
 import { PhotoGallery } from "@/components/photo-gallery"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +40,8 @@ interface ProfileViewProps {
   profile: Profile
   onStatusChange?: (status: Profile["status"]) => void
   onBan?: () => void
+  onDelete?: () => void
+  onCancelDelete?: () => void
   showActions?: boolean
   showFullProfileLink?: boolean
   className?: string
@@ -44,10 +51,30 @@ export function ProfileView({
   profile,
   onStatusChange,
   onBan,
+  onDelete,
+  onCancelDelete,
   showActions = true,
   showFullProfileLink = false,
   className,
 }: ProfileViewProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [cancellingDelete, setCancellingDelete] = React.useState(false)
+
+  const handleDelete = async () => {
+    await deleteProfile(profile.id)
+    onDelete?.()
+  }
+
+  const handleCancelDelete = async () => {
+    setCancellingDelete(true)
+    try {
+      await cancelProfileDeletion(profile.id, 'live')
+      onCancelDelete?.()
+    } finally {
+      setCancellingDelete(false)
+    }
+  }
+
   const location = profile.geolocation
     ? [profile.geolocation.city, profile.geolocation.region]
         .filter(Boolean)
@@ -87,9 +114,16 @@ export function ProfileView({
                   <p className="text-sm text-gray-500">{profile.pronouns}</p>
                 )}
               </div>
-              <Badge className={cn(getStatusColor(profile.status), "flex-shrink-0")}>
-                {profile.status}
-              </Badge>
+              <div className="flex flex-col items-end gap-1">
+                <Badge className={cn(getStatusColor(profile.status), "flex-shrink-0")}>
+                  {getStatusLabel(profile.status)}
+                </Badge>
+                {profile.status === 'pending_delete' && profile.delete_at && (
+                  <span className="text-xs text-orange-600">
+                    Deletes {formatDate(profile.delete_at)}
+                  </span>
+                )}
+              </div>
             </div>
             {location && (
               <div className="flex items-center gap-1.5 text-sm text-gray-500">
@@ -101,32 +135,59 @@ export function ProfileView({
 
           {/* Actions */}
           {showActions && (
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Change Status
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => onStatusChange?.("live")}>
-                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                    Set Live
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onStatusChange?.("waitlisted")}>
-                    <Clock className="mr-2 h-4 w-4 text-yellow-600" />
-                    Set Waitlisted
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onStatusChange?.("banned")}
-                    className="text-red-600"
+            <div className="flex flex-wrap gap-2">
+              {profile.status === 'pending_delete' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelDelete}
+                  disabled={cancellingDelete}
+                >
+                  {cancellingDelete ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                  )}
+                  Cancel Deletion
+                </Button>
+              ) : (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Change Status
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => onStatusChange?.("live")}>
+                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Set Live
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onStatusChange?.("waitlisted")}>
+                        <Clock className="mr-2 h-4 w-4 text-yellow-600" />
+                        Set Waitlisted
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onStatusChange?.("banned")}
+                        className="text-red-600"
+                      >
+                        <Ban className="mr-2 h-4 w-4" />
+                        Ban User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-gray-500 hover:text-red-600 hover:bg-red-50"
                   >
-                    <Ban className="mr-2 h-4 w-4" />
-                    Ban User
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </>
+              )}
               {profile.needs_manual_review && (
                 <Button variant="default" size="sm">
                   <CheckCircle className="mr-2 h-4 w-4" />
@@ -288,12 +349,14 @@ export function ProfileView({
                 <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 <span>Joined {formatDate(profile.created_at)}</span>
               </div>
-              {profile.user.last_seen_at && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span>Last seen {formatDateTime(profile.user.last_seen_at)}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <span>
+                  Last seen {profile.user.last_seen_at
+                    ? formatRelativeTime(profile.user.last_seen_at)
+                    : "Never"}
+                </span>
+              </div>
               {profile.user.referral_code && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <Shield className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -309,6 +372,14 @@ export function ProfileView({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteProfileDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        profileName={`${profile.first_name} ${profile.last_name}`}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

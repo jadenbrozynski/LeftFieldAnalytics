@@ -69,9 +69,11 @@ async function getPool(): Promise<Pool> {
  * Execute a READ-ONLY query against the database.
  * All queries are wrapped in a read-only transaction for safety.
  */
+type QueryParam = string | number | boolean | null | undefined | string[] | number[]
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
-  params?: (string | number | boolean | null | undefined)[]
+  params?: QueryParam[]
 ): Promise<T[]> {
   const pool = await getPool()
   const client = await pool.connect()
@@ -95,7 +97,7 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
  */
 export async function queryOne<T extends QueryResultRow = QueryResultRow>(
   text: string,
-  params?: (string | number | boolean | null | undefined)[]
+  params?: QueryParam[]
 ): Promise<T | null> {
   const rows = await query<T>(text, params)
   return rows[0] || null
@@ -106,10 +108,45 @@ export async function queryOne<T extends QueryResultRow = QueryResultRow>(
  */
 export async function queryCount(
   text: string,
-  params?: (string | number | boolean | null | undefined)[]
+  params?: QueryParam[]
 ): Promise<number> {
   const rows = await query<{ count: string }>(text, params)
   return parseInt(rows[0]?.count || '0', 10)
+}
+
+/**
+ * Execute a WRITE query against the database (INSERT, UPDATE, DELETE).
+ * Returns the affected rows.
+ */
+export async function mutate<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: QueryParam[]
+): Promise<T[]> {
+  const pool = await getPool()
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await client.query<T>(text, params)
+    await client.query('COMMIT')
+    return result.rows
+  } catch (error) {
+    await client.query('ROLLBACK')
+    console.error('Database mutation error:', error)
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Execute a single write query and return the first row or null
+ */
+export async function mutateOne<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: QueryParam[]
+): Promise<T | null> {
+  const rows = await mutate<T>(text, params)
+  return rows[0] || null
 }
 
 /**
