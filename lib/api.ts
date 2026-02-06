@@ -335,6 +335,23 @@ export async function fetchDropMatches(dropId: string): Promise<DropMatchesRespo
   return fetchAPI<DropMatchesResponse>(`/api/drops/${dropId}/matches`)
 }
 
+export async function exportMatchProfiles(matchId: string, fileName?: string): Promise<void> {
+  const response = await fetch(`/api/matches/${matchId}/export`)
+  if (!response.ok) {
+    throw new Error('Failed to export match profiles')
+  }
+  const data = await response.json()
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName || `match-${matchId}-profiles.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 export interface DropRequestsResponse {
   data: DropMatchRequest[]
   stats: {

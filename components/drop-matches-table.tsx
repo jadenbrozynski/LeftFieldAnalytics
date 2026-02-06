@@ -15,8 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ConversationSheet } from "@/components/conversation-sheet"
+import { exportMatchProfiles } from "@/lib/api"
 import { formatRelativeTime } from "@/lib/utils"
-import { MessageSquare, Heart, HeartOff } from "lucide-react"
+import { MessageSquare, Heart, HeartOff, Download } from "lucide-react"
 
 interface DropMatchesTableProps {
   matches: DropMatch[]
@@ -26,6 +27,19 @@ interface DropMatchesTableProps {
 export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTableProps) {
   const [selectedMatch, setSelectedMatch] = React.useState<DropMatch | null>(null)
   const [modalOpen, setModalOpen] = React.useState(false)
+  const [exportingId, setExportingId] = React.useState<string | null>(null)
+
+  const handleExport = async (match: DropMatch) => {
+    setExportingId(match.id)
+    try {
+      const fileName = `match-${match.profile1.first_name}-${match.profile2.first_name}.json`
+      await exportMatchProfiles(match.id, fileName)
+    } catch (err) {
+      console.error('Export failed:', err)
+    } finally {
+      setExportingId(null)
+    }
+  }
 
   const filteredMatches = React.useMemo(() => {
     if (filter === 'all') return matches
@@ -102,6 +116,16 @@ export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTablePr
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleExport(match)}
+                      disabled={exportingId === match.id}
+                      title="Export match profiles as JSON"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Download className={`h-4 w-4 ${exportingId === match.id ? 'animate-pulse text-gray-300' : 'text-gray-500'}`} />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
