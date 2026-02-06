@@ -39,7 +39,21 @@ const COLORS = {
   gray: '#9ca3af',
 }
 
-export default function DropComparisonPage() {
+export default function DropComparisonPageWrapper() {
+  return (
+    <React.Suspense fallback={
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    }>
+      <DropComparisonPage />
+    </React.Suspense>
+  )
+}
+
+function DropComparisonPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
