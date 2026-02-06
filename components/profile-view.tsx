@@ -19,9 +19,13 @@ import {
   Trash2,
   RotateCcw,
   Loader2,
+  Film,
+  BookOpen,
+  Music,
+  MapPinned,
 } from "lucide-react"
 import { Profile } from "@/lib/types"
-import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber, formatArtistNames } from "@/lib/utils"
 import { deleteProfile, cancelProfileDeletion } from "@/lib/api"
 import { DeleteProfileDialog } from "@/components/delete-profile-dialog"
 import { PhotoGallery } from "@/components/photo-gallery"
@@ -328,6 +332,129 @@ export function ProfileView({
               </div>
             </>
           )}
+
+          {/* Movies */}
+          <Separator />
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+              <Film className="h-4 w-4 text-gray-400" />
+              Movies
+            </h3>
+            {profile.movies && profile.movies.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {profile.movies.map((movie) => (
+                  <div key={movie.id} className="flex items-center gap-2.5">
+                    {movie.primary_image && (
+                      <img
+                        src={movie.primary_image}
+                        alt={movie.primary_title}
+                        className="h-10 w-7 rounded object-cover flex-shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-700 truncate">{movie.primary_title}</p>
+                      {movie.genres && movie.genres.length > 0 && (
+                        <p className="text-xs text-gray-500 truncate">{movie.genres.join(", ")}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No data</p>
+            )}
+          </div>
+
+          {/* Books */}
+          <Separator />
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+              <BookOpen className="h-4 w-4 text-gray-400" />
+              Books
+            </h3>
+            {profile.books && profile.books.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {profile.books.map((book) => (
+                  <div key={book.id} className="flex items-center gap-2.5">
+                    {book.thumbnail && (
+                      <img
+                        src={book.thumbnail}
+                        alt={book.title}
+                        className="h-10 w-7 rounded object-cover flex-shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-700 truncate">{book.title}</p>
+                      {book.authors && book.authors.length > 0 && (
+                        <p className="text-xs text-gray-500 truncate">{book.authors.join(", ")}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No data</p>
+            )}
+          </div>
+
+          {/* Songs */}
+          <Separator />
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+              <Music className="h-4 w-4 text-gray-400" />
+              Songs
+            </h3>
+            {profile.songs && profile.songs.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {profile.songs.map((song) => (
+                  <div key={song.id} className="flex items-center gap-2.5">
+                    {song.album?.images?.[0]?.url && (
+                      <img
+                        src={song.album.images[0].url}
+                        alt={song.name}
+                        className="h-8 w-8 rounded object-cover flex-shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-700 truncate">{song.name}</p>
+                      {song.artists && song.artists.length > 0 && (
+                        <p className="text-xs text-gray-500 truncate">{formatArtistNames(song.artists)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No data</p>
+            )}
+          </div>
+
+          {/* Places */}
+          <Separator />
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+              <MapPinned className="h-4 w-4 text-gray-400" />
+              Places
+            </h3>
+            {profile.places && profile.places.length > 0 ? (
+              <div className="grid grid-cols-1 gap-1.5">
+                {profile.places.map((place) => (
+                  <div key={place.id} className="text-sm">
+                    <p className="font-medium text-gray-700">
+                      {place.display_name?.text || "Unknown Place"}
+                    </p>
+                    {(place.primary_type_display_name?.text || place.short_formatted_address) && (
+                      <p className="text-xs text-gray-500">
+                        {[place.primary_type_display_name?.text, place.short_formatted_address].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No data</p>
+            )}
+          </div>
 
           <Separator />
 

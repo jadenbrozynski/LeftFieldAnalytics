@@ -2,6 +2,8 @@ import {
   Profile,
   DashboardStats,
   ProfileReport,
+  ProfileTabReport,
+  ProfileTabMatch,
   PromptDefinition,
   Interest,
   Activity,
@@ -109,6 +111,26 @@ export async function updateProfileStatus(id: string, status: Profile['status'])
     action: 'update_status',
     status,
   })
+}
+
+export interface ProfileActivityResponse {
+  reports: ProfileTabReport[]
+  matches: ProfileTabMatch[]
+}
+
+export async function fetchProfileActivity(id: string): Promise<ProfileActivityResponse> {
+  return fetchAPI<ProfileActivityResponse>(`/api/profiles/${id}/activity`)
+}
+
+// Convenience wrappers
+export async function fetchProfileReports(id: string): Promise<ProfileTabReport[]> {
+  const data = await fetchProfileActivity(id)
+  return data.reports
+}
+
+export async function fetchProfileMatches(id: string): Promise<ProfileTabMatch[]> {
+  const data = await fetchProfileActivity(id)
+  return data.matches
 }
 
 // Waitlist

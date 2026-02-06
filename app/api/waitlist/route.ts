@@ -268,6 +268,10 @@ export async function GET(request: NextRequest) {
       prompt_responses: [],
       interests: [],
       activities: [],
+      movies: [],
+      books: [],
+      songs: [],
+      places: [],
     }))
 
     return NextResponse.json({

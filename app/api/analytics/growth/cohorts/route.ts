@@ -27,7 +27,7 @@ export async function GET() {
       SELECT
         cohort_week::text as cohort_date,
         COUNT(*) as cohort_size,
-        EXTRACT(DAY FROM (CURRENT_DATE - cohort_week)) as days_old,
+        (CURRENT_DATE - cohort_week) as days_old,
         CASE
           WHEN cohort_week <= CURRENT_DATE - INTERVAL '1 day' THEN
             COALESCE(

@@ -2,10 +2,11 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight, Play, Expand } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProfileUpload } from "@/lib/types"
 import { Button } from "@/components/ui/button"
+import { ImageLightbox } from "@/components/image-lightbox"
 
 interface PhotoGalleryProps {
   uploads: ProfileUpload[]
@@ -15,6 +16,7 @@ interface PhotoGalleryProps {
 
 export function PhotoGallery({ uploads, className, compact = false }: PhotoGalleryProps) {
   const [currentIndex, setCurrentIndex] = React.useState(0)
+  const [lightboxOpen, setLightboxOpen] = React.useState(false)
 
   const sortedUploads = [...uploads].sort((a, b) => a.display_order - b.display_order)
 
@@ -44,7 +46,7 @@ export function PhotoGallery({ uploads, className, compact = false }: PhotoGalle
     <div className={cn("space-y-2", className)}>
       {/* Main Image */}
       <div className={cn(
-        "relative bg-gray-100 rounded-xl overflow-hidden",
+        "relative bg-gray-100 rounded-xl overflow-hidden group",
         compact ? "aspect-square" : "aspect-[3/4]"
       )}>
         {currentUpload.type === "video" ? (
@@ -91,6 +93,20 @@ export function PhotoGallery({ uploads, className, compact = false }: PhotoGalle
               <ChevronRight className={compact ? "h-3 w-3" : "h-4 w-4"} />
             </Button>
           </>
+        )}
+
+        {/* Expand button */}
+        {currentUpload.type !== "video" && (
+          <button
+            onClick={() => setLightboxOpen(true)}
+            className={cn(
+              "absolute bottom-2 right-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-opacity",
+              compact ? "p-1 opacity-0 group-hover:opacity-100" : "p-1.5"
+            )}
+            title="Expand image"
+          >
+            <Expand className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+          </button>
         )}
 
         {/* Dots Indicator */}
@@ -161,6 +177,16 @@ export function PhotoGallery({ uploads, className, compact = false }: PhotoGalle
             </button>
           ))}
         </div>
+      )}
+
+      {/* Lightbox */}
+      {currentUpload.type !== "video" && (
+        <ImageLightbox
+          src={currentUpload.url}
+          alt={`Photo ${currentIndex + 1}`}
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+        />
       )}
     </div>
   )

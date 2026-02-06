@@ -21,17 +21,28 @@ import {
   Trash2,
   RotateCcw,
   Loader2,
+  Film,
+  BookOpen,
+  Music,
+  MapPinned,
+  AlertTriangle,
+  MessageSquare,
+  Heart,
+  UserX,
+  Expand,
 } from "lucide-react"
-import { fetchProfile, deleteProfile, cancelProfileDeletion } from "@/lib/api"
+import { fetchProfile, deleteProfile, cancelProfileDeletion, fetchProfileActivity } from "@/lib/api"
 import { DeleteProfileDialog } from "@/components/delete-profile-dialog"
-import { Profile } from "@/lib/types"
+import { ImageLightbox } from "@/components/image-lightbox"
+import { Profile, ProfileTabReport, ProfileTabMatch } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
-import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber } from "@/lib/utils"
+import { cn, formatDate, formatRelativeTime, formatHeight, getStatusColor, getStatusLabel, getGenderLabel, formatPhoneNumber, formatArtistNames } from "@/lib/utils"
 
 export default function ProfileDetailPage() {
   const params = useParams()
@@ -44,6 +55,10 @@ export default function ProfileDetailPage() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [cancellingDelete, setCancellingDelete] = React.useState(false)
+  const [reports, setReports] = React.useState<ProfileTabReport[]>([])
+  const [matches, setMatches] = React.useState<ProfileTabMatch[]>([])
+  const [tabsLoading, setTabsLoading] = React.useState(true)
+  const [lightboxOpen, setLightboxOpen] = React.useState(false)
 
   const handleDelete = async () => {
     await deleteProfile(profileId)
@@ -80,6 +95,23 @@ export default function ProfileDetailPage() {
     }
 
     loadProfile()
+  }, [profileId])
+
+  React.useEffect(() => {
+    async function loadActivity() {
+      try {
+        setTabsLoading(true)
+        const data = await fetchProfileActivity(profileId)
+        setReports(data.reports)
+        setMatches(data.matches)
+      } catch (err) {
+        console.error('Failed to load profile activity:', err)
+      } finally {
+        setTabsLoading(false)
+      }
+    }
+
+    loadActivity()
   }, [profileId])
 
   if (loading) {
@@ -148,7 +180,7 @@ export default function ProfileDetailPage() {
         {/* Left - Photos */}
         <div className="lg:w-72 flex-shrink-0 space-y-3">
           {/* Main Photo */}
-          <div className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden">
+          <div className="relative aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden group">
             {sortedUploads.length > 0 ? (
               <>
                 {currentUpload?.type === "video" ? (
@@ -194,6 +226,15 @@ export default function ProfileDetailPage() {
                   <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1">
                     <Play className="h-3 w-3 text-white fill-white" />
                   </div>
+                )}
+                {currentUpload?.type !== "video" && (
+                  <button
+                    onClick={() => setLightboxOpen(true)}
+                    className="absolute bottom-2 right-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors p-1.5"
+                    title="Expand image"
+                  >
+                    <Expand className="h-3.5 w-3.5" />
+                  </button>
                 )}
               </>
             ) : (
@@ -390,6 +431,129 @@ export default function ProfileDetailPage() {
                 </>
               )}
 
+              {/* Movies */}
+              <Separator />
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
+                  <Film className="h-4 w-4 text-gray-400" />
+                  Movies
+                </h3>
+                {profile.movies && profile.movies.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {profile.movies.map((movie) => (
+                      <div key={movie.id} className="flex items-center gap-2.5">
+                        {movie.primary_image && (
+                          <img
+                            src={movie.primary_image}
+                            alt={movie.primary_title}
+                            className="h-12 w-8 rounded object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">{movie.primary_title}</p>
+                          {movie.genres && movie.genres.length > 0 && (
+                            <p className="text-xs text-gray-500 truncate">{movie.genres.join(", ")}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No data</p>
+                )}
+              </div>
+
+              {/* Books */}
+              <Separator />
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
+                  <BookOpen className="h-4 w-4 text-gray-400" />
+                  Books
+                </h3>
+                {profile.books && profile.books.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {profile.books.map((book) => (
+                      <div key={book.id} className="flex items-center gap-2.5">
+                        {book.thumbnail && (
+                          <img
+                            src={book.thumbnail}
+                            alt={book.title}
+                            className="h-12 w-8 rounded object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">{book.title}</p>
+                          {book.authors && book.authors.length > 0 && (
+                            <p className="text-xs text-gray-500 truncate">{book.authors.join(", ")}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No data</p>
+                )}
+              </div>
+
+              {/* Songs */}
+              <Separator />
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
+                  <Music className="h-4 w-4 text-gray-400" />
+                  Songs
+                </h3>
+                {profile.songs && profile.songs.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {profile.songs.map((song) => (
+                      <div key={song.id} className="flex items-center gap-2.5">
+                        {song.album?.images?.[0]?.url && (
+                          <img
+                            src={song.album.images[0].url}
+                            alt={song.name}
+                            className="h-8 w-8 rounded object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">{song.name}</p>
+                          {song.artists && song.artists.length > 0 && (
+                            <p className="text-xs text-gray-500 truncate">{formatArtistNames(song.artists)}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No data</p>
+                )}
+              </div>
+
+              {/* Places */}
+              <Separator />
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
+                  <MapPinned className="h-4 w-4 text-gray-400" />
+                  Places
+                </h3>
+                {profile.places && profile.places.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {profile.places.map((place) => (
+                      <div key={place.id} className="text-sm">
+                        <p className="font-medium text-gray-700">
+                          {place.display_name?.text || "Unknown Place"}
+                        </p>
+                        {(place.primary_type_display_name?.text || place.short_formatted_address) && (
+                          <p className="text-xs text-gray-500">
+                            {[place.primary_type_display_name?.text, place.short_formatted_address].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No data</p>
+                )}
+              </div>
+
               <Separator />
 
               {/* Account Info */}
@@ -432,41 +596,144 @@ export default function ProfileDetailPage() {
         </div>
       </div>
 
-      {/* Activity Tabs - Compact */}
-      <Tabs defaultValue="timeline">
+      {/* Activity Tabs */}
+      <Tabs defaultValue="matches">
         <TabsList>
-          <TabsTrigger value="timeline">Activity</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="matches">Matches</TabsTrigger>
+          <TabsTrigger value="matches">
+            Matches{!tabsLoading && matches.length > 0 ? ` (${matches.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            Reports{!tabsLoading && reports.length > 0 ? ` (${reports.length})` : ''}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="timeline" className="mt-3">
+        <TabsContent value="matches" className="mt-3">
           <Card>
-            <CardContent className="py-6">
-              <div className="text-center text-gray-500">
-                <Activity className="h-6 w-6 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">Activity timeline coming soon</p>
-              </div>
+            <CardContent className="py-4">
+              {tabsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : matches.length === 0 ? (
+                <div className="text-center text-gray-500 py-4">
+                  <Heart className="h-6 w-6 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No matches yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {matches.map((match) => (
+                    <Link
+                      key={match.id}
+                      href={`/profiles/${match.matched_profile_id}`}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Avatar className="h-9 w-9">
+                        {match.matched_profile_photo && (
+                          <AvatarImage src={match.matched_profile_photo} />
+                        )}
+                        <AvatarFallback className="text-sm">
+                          {match.matched_profile_name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900 truncate">
+                            {match.matched_profile_name}
+                          </span>
+                          {match.unmatched && (
+                            <Badge variant="secondary" className="text-xs bg-red-50 text-red-700">
+                              {match.unmatched_by_this_profile ? 'Unmatched' : 'Unmatched by other'}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span>{formatDate(match.created_at)}</span>
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            {match.message_count} messages
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="reports" className="mt-3">
           <Card>
-            <CardContent className="py-6">
-              <p className="text-sm text-gray-500 text-center">
-                No reports filed against this profile
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="matches" className="mt-3">
-          <Card>
-            <CardContent className="py-6">
-              <p className="text-sm text-gray-500 text-center">
-                Match history coming soon
-              </p>
+            <CardContent className="py-4">
+              {tabsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-48 mb-1" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : reports.length === 0 ? (
+                <div className="text-center text-gray-500 py-4">
+                  <Shield className="h-6 w-6 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No reports filed against this profile</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {reports.map((report) => (
+                    <Link
+                      key={report.id}
+                      href={`/reports/${report.id}`}
+                      className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <AlertTriangle className={cn(
+                        "h-4 w-4 mt-0.5 flex-shrink-0",
+                        report.is_resolved ? "text-green-500" : "text-orange-500"
+                      )} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {report.reporter_name
+                              ? `Reported by ${report.reporter_name}`
+                              : report.internally_flagged
+                              ? 'System flagged'
+                              : 'Anonymous report'}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-xs",
+                              report.is_resolved
+                                ? "bg-green-50 text-green-700"
+                                : "bg-orange-50 text-orange-700"
+                            )}
+                          >
+                            {report.is_resolved ? 'Resolved' : 'Unresolved'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {formatDate(report.created_at)}
+                          {report.reporter_notes && (
+                            <span className="ml-2 text-gray-600">— {report.reporter_notes}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -479,6 +746,16 @@ export default function ProfileDetailPage() {
         profileName={`${profile.first_name} ${profile.last_name}`}
         onConfirm={handleDelete}
       />
+
+      {/* Image Lightbox */}
+      {sortedUploads[currentPhotoIndex]?.type !== "video" && (
+        <ImageLightbox
+          src={sortedUploads[currentPhotoIndex].url}
+          alt={`${profile.first_name}'s photo`}
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+        />
+      )}
     </div>
   )
 }

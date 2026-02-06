@@ -239,6 +239,10 @@ async function fetchFullProfile(profileId: string) {
       name: a.name,
       url: a.url,
     })),
+    movies: [],
+    books: [],
+    songs: [],
+    places: [],
   }
 }
 

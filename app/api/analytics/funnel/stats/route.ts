@@ -35,7 +35,11 @@ export async function GET(request: NextRequest) {
         (SELECT COUNT(DISTINCT p.id) FROM profiles p JOIN base_users u ON p.user_id = u.id WHERE p.id IN (
           SELECT profile1_id FROM matches UNION SELECT profile2_id FROM matches
         )) as with_match,
-        (SELECT COUNT(DISTINCT cm.sender_profile_id) FROM conversation_messages cm JOIN profiles p ON cm.sender_profile_id = p.id JOIN base_users u ON p.user_id = u.id) as with_message
+        (SELECT COUNT(DISTINCT fm.sender_profile_id) FROM (
+          SELECT DISTINCT ON (conversation_id) sender_profile_id
+          FROM conversation_messages
+          ORDER BY conversation_id, created_at ASC
+        ) fm JOIN profiles p ON fm.sender_profile_id = p.id JOIN base_users u ON p.user_id = u.id) as with_message
     `)
 
     const signups = parseInt(funnelCounts?.signups || '0')

@@ -15,9 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ConversationSheet } from "@/components/conversation-sheet"
+import { MatchSplitView } from "@/components/match-split-view"
 import { exportMatchProfiles } from "@/lib/api"
 import { formatRelativeTime } from "@/lib/utils"
-import { MessageSquare, Heart, HeartOff, Download } from "lucide-react"
+import { MessageSquare, Heart, HeartOff, Download, Columns2 } from "lucide-react"
 
 interface DropMatchesTableProps {
   matches: DropMatch[]
@@ -27,6 +28,8 @@ interface DropMatchesTableProps {
 export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTableProps) {
   const [selectedMatch, setSelectedMatch] = React.useState<DropMatch | null>(null)
   const [modalOpen, setModalOpen] = React.useState(false)
+  const [splitViewMatch, setSplitViewMatch] = React.useState<DropMatch | null>(null)
+  const [splitViewOpen, setSplitViewOpen] = React.useState(false)
   const [exportingId, setExportingId] = React.useState<string | null>(null)
 
   const handleExport = async (match: DropMatch) => {
@@ -49,6 +52,11 @@ export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTablePr
   const handleViewConversation = (match: DropMatch) => {
     setSelectedMatch(match)
     setModalOpen(true)
+  }
+
+  const handleSplitView = (match: DropMatch) => {
+    setSplitViewMatch(match)
+    setSplitViewOpen(true)
   }
 
   if (filteredMatches.length === 0) {
@@ -115,16 +123,15 @@ export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTablePr
                   {formatRelativeTime(match.created_at)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleExport(match)}
-                      disabled={exportingId === match.id}
-                      title="Export match profiles as JSON"
+                      onClick={() => handleSplitView(match)}
+                      title="Compare profiles side by side"
                       className="h-8 w-8 p-0"
                     >
-                      <Download className={`h-4 w-4 ${exportingId === match.id ? 'animate-pulse text-gray-300' : 'text-gray-500'}`} />
+                      <Columns2 className="h-4 w-4 text-gray-500" />
                     </Button>
                     <Button
                       size="sm"
@@ -134,6 +141,16 @@ export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTablePr
                       className="h-8 w-8 p-0"
                     >
                       <MessageSquare className="h-4 w-4 text-gray-500" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleExport(match)}
+                      disabled={exportingId === match.id}
+                      title="Export match profiles as JSON"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Download className={`h-4 w-4 ${exportingId === match.id ? 'animate-pulse text-gray-300' : 'text-gray-500'}`} />
                     </Button>
                     <Link
                       href={`/profiles/${match.profile1.id}`}
@@ -168,6 +185,12 @@ export function DropMatchesTable({ matches, filter = 'all' }: DropMatchesTablePr
         conversationId={selectedMatch?.conversation?.id || null}
         open={modalOpen}
         onOpenChange={setModalOpen}
+      />
+
+      <MatchSplitView
+        match={splitViewMatch}
+        open={splitViewOpen}
+        onOpenChange={setSplitViewOpen}
       />
     </>
   )

@@ -95,6 +95,16 @@ export function getGenderLabel(gender: string): string {
   }
 }
 
+export function formatArtistName(artist: string | { name?: string; [key: string]: unknown }): string {
+  if (typeof artist === 'string') return artist
+  if (artist && typeof artist === 'object' && artist.name) return artist.name
+  return 'Unknown Artist'
+}
+
+export function formatArtistNames(artists: (string | { name?: string })[]): string {
+  return artists.map(formatArtistName).join(', ')
+}
+
 export function formatPhoneNumber(phone: string): string {
   // Remove all non-digits
   const digits = phone.replace(/\D/g, '')

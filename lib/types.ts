@@ -36,6 +36,10 @@ export interface Profile {
   prompt_responses: PromptResponse[]
   interests: Interest[]
   activities: Activity[]
+  movies: Movie[]
+  books: Book[]
+  songs: Song[]
+  places: Place[]
   geolocation: ProfileGeolocation | null
   user: User
   // Optional: populated in waitlist responses
@@ -91,6 +95,44 @@ export interface Activity {
   usage_count?: number
 }
 
+export interface Movie {
+  id: string
+  imdb_id: string
+  primary_title: string
+  original_title: string
+  primary_image: string | null
+  genres: string[] | null
+}
+
+export interface Book {
+  id: string
+  google_books_id: string
+  title: string
+  authors: string[]
+  thumbnail: string
+}
+
+export interface SpotifyArtist {
+  name: string
+  [key: string]: unknown
+}
+
+export interface Song {
+  id: string
+  spotify_track_id: string
+  name: string
+  artists: (string | SpotifyArtist)[]
+  album: { name?: string; images?: { url: string }[] } | null
+}
+
+export interface Place {
+  id: string
+  google_places_id: string
+  display_name: { text?: string } | null
+  primary_type_display_name: { text?: string } | null
+  short_formatted_address: string | null
+}
+
 export interface ProfileReport {
   id: string
   profile_id: string | null
@@ -104,6 +146,26 @@ export interface ProfileReport {
   reporter: Profile | null
   reported: Profile
   reported_upload?: ProfileUpload | null
+}
+
+export interface ProfileTabReport {
+  id: string
+  reporter_notes: string | null
+  is_resolved: boolean
+  created_at: string
+  reporter_name: string | null
+  internally_flagged: boolean
+}
+
+export interface ProfileTabMatch {
+  id: string
+  matched_profile_id: string
+  matched_profile_name: string
+  matched_profile_photo: string | null
+  unmatched: boolean
+  unmatched_by_this_profile: boolean
+  created_at: string
+  message_count: number
 }
 
 export interface WaitlistCity {

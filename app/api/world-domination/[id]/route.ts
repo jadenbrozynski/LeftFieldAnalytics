@@ -196,6 +196,10 @@ export async function GET(
       prompt_responses: [],
       interests: [],
       activities: [],
+      movies: [],
+      books: [],
+      songs: [],
+      places: [],
     }))
 
     // Get population

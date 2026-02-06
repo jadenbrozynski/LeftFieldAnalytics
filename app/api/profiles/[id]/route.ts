@@ -74,6 +74,39 @@ interface ActivityRow {
   url: string
 }
 
+interface MovieRow {
+  id: string
+  imdb_id: string
+  primary_title: string
+  original_title: string
+  primary_image: string | null
+  genres: string[] | null
+}
+
+interface BookRow {
+  id: string
+  google_books_id: string
+  title: string
+  authors: string[]
+  thumbnail: string
+}
+
+interface SongRow {
+  id: string
+  spotify_track_id: string
+  name: string
+  artists: string[]
+  album: unknown
+}
+
+interface PlaceRow {
+  id: string
+  google_places_id: string
+  display_name: unknown
+  primary_type_display_name: unknown
+  short_formatted_address: string | null
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -133,7 +166,7 @@ export async function GET(
     }
 
     // Fetch all related data in parallel
-    const [uploads, promptResponses, interests, activities] = await Promise.all([
+    const [uploads, promptResponses, interests, activities, movies, books, songs, places] = await Promise.all([
       // Profile uploads
       query<UploadRow>(`
         SELECT id, url, display_order, type
@@ -177,6 +210,38 @@ export async function GET(
         FROM activities a
         JOIN profile_activities pa ON a.id = pa.activity_id
         WHERE pa.profile_id = $1
+      `, [id]),
+
+      // Profile movies
+      query<MovieRow>(`
+        SELECT m.id, m.imdb_id, m.primary_title, m.original_title, m.primary_image, m.genres
+        FROM movies m
+        JOIN profile_movies pm ON m.id = pm.movie_id
+        WHERE pm.profile_id = $1
+      `, [id]),
+
+      // Profile books
+      query<BookRow>(`
+        SELECT b.id, b.google_books_id, b.title, b.authors, b.thumbnail
+        FROM books b
+        JOIN profile_books pb ON b.id = pb.book_id
+        WHERE pb.profile_id = $1
+      `, [id]),
+
+      // Profile songs
+      query<SongRow>(`
+        SELECT s.id, s.spotify_track_id, s.name, s.artists, s.album
+        FROM songs s
+        JOIN profile_songs ps ON s.id = ps.song_id
+        WHERE ps.profile_id = $1
+      `, [id]),
+
+      // Profile places
+      query<PlaceRow>(`
+        SELECT p.id, p.google_places_id, p.display_name, p.primary_type_display_name, p.short_formatted_address
+        FROM places p
+        JOIN profile_places pp ON p.id = pp.place_id
+        WHERE pp.profile_id = $1
       `, [id]),
     ])
 
@@ -251,6 +316,35 @@ export async function GET(
         id: a.id,
         name: a.name,
         url: a.url,
+      })),
+      movies: movies.map(m => ({
+        id: m.id,
+        imdb_id: m.imdb_id,
+        primary_title: m.primary_title,
+        original_title: m.original_title,
+        primary_image: m.primary_image,
+        genres: m.genres,
+      })),
+      books: books.map(b => ({
+        id: b.id,
+        google_books_id: b.google_books_id,
+        title: b.title,
+        authors: b.authors,
+        thumbnail: b.thumbnail,
+      })),
+      songs: songs.map(s => ({
+        id: s.id,
+        spotify_track_id: s.spotify_track_id,
+        name: s.name,
+        artists: s.artists,
+        album: s.album,
+      })),
+      places: places.map(p => ({
+        id: p.id,
+        google_places_id: p.google_places_id,
+        display_name: p.display_name,
+        primary_type_display_name: p.primary_type_display_name,
+        short_formatted_address: p.short_formatted_address,
       })),
     }
 
